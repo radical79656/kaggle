@@ -1,0 +1,111 @@
+
+df = pd.read_csv('train.csv')
+dftest = pd.read_csv('test.csv')
+ID = dftest['id']
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import confusion_matrix,accuracy_score
+
+df.drop(['city','has_mobile','last_seen','career_start','life_main','education_status','career_end','occupation_name','langs','id','has_photo'],axis=1,inplace=True)
+
+def get_ot(ot):
+    if ot == 'university':
+        return 2
+    if ot == 'work':
+        return 3
+    return 1
+df['occupation_type']=df['occupation_type'].apply(get_ot)
+
+
+def get_bdate(date):
+    if len(str(date))>6:
+        return int(date[-4:])
+    else:
+        return -1
+
+df['bdate']=df['bdate'].apply(get_bdate)
+
+print(df.groupby('occupation_type')['bdate'].median())
+age_1 = df[df['occupation_type']==1]['bdate'].median()
+age_2 = df[df['occupation_type']==2]['bdate'].median()
+age_3 = df[df['occupation_type']==3]['bdate'].median()
+
+def ot_bd(row):
+    if row['bdate'] == -1:
+        if row['occupation_type']==1:
+            return age_1
+        if row['occupation_type']==2:
+            return age_2
+        if row['occupation_type']==3:
+            return age_3
+    return row     
+
+df=df.apply(ot_bd,axis=1)
+
+def get_ef(ef):
+    if ef == 'Distance Learning':
+        return 1
+    if ef == 'Full-time':
+        return 2
+    if ef == 'Part-time':
+        return 3
+    return 0
+df['education_form']=df['education_form'].apply(get_ef)
+
+def get_pm(pm):
+    if pm == 1:
+        return 1
+    return 0
+df['people_main']=df['people_main'].apply(get_pm)
+
+dftest.drop(['city','has_mobile','last_seen','career_start','life_main','education_status','career_end','occupation_name','langs','id','has_photo'],axis=1,inplace=True)
+
+def get_bdate(date):
+    if len(str(date))>6:
+        return int(date[-4:])
+    else:
+        return -1
+dftest['bdate']=dftest['bdate'].apply(get_bdate)
+
+def get_ot(ot):
+    if ot == 'university':
+        return 1
+    if ot == 'work':
+        return 2
+    return 0
+dftest['occupation_type']=dftest['occupation_type'].apply(get_ot)
+
+def get_ef(ef):
+    if ef == 'Distance Learning':
+        return 1
+    if ef == 'Full-time':
+        return 2
+    if ef == 'Part-time':
+        return 3
+    return 0
+dftest['education_form']=dftest['education_form'].apply(get_ef)
+
+def get_pm(pm):
+    if pm == 1:
+        return 1
+    return 0
+dftest['people_main']=dftest['people_main'].apply(get_pm)
+
+dftest.info()
+
+x_train = df.drop('result',axis=1)
+
+y_train = df['result']
+
+sc = StandardScaler()
+x_test = sc.fit_transform(dftest)
+x_train = sc.transform(x_train)
+
+classifier = KNeighborsClassifier(n_neighbors = 5)
+classifier.fit(x_train,y_train)
+
+y_predict = classifier.predict(x_test)
+
+result = pd.DataFrame({'id':ID,'result':y_predict})
+result.to_csv('sus.csv',index=False)
